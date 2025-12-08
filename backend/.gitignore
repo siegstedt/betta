@@ -1,0 +1,14 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# User-uploaded data
+fit_files/
+
+# OS-generated files
+.DS_Store
+
+# IDE configuration
+.vscode/
+.idea/
+
