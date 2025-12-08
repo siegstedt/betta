@@ -30,3 +30,7 @@ postgres_data/
 # Temporary files
 *.tmp
 *.swp
+
+# Development and cache folders
+notebooks/
+fit_files/
