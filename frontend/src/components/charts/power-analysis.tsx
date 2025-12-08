@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Activity, RechartsTickProps } from '@/lib/definitions';
 import { calculatePowerDistribution, calculateMMP } from '@/lib/analysis';
 import {
@@ -19,7 +19,7 @@ import {
 import { formatDuration } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 
-const CustomizedMMPTick = (props: any) => {
+const CustomizedMMPTick: React.FC<RechartsTickProps> = (props) => {
   const { x, y, payload } = props;
   const duration = payload.value as number;
   const tickLabels: Record<
@@ -148,6 +148,7 @@ export default function PowerAnalysis({
               <XAxis
                 dataKey="duration"
                 type="category"
+                // @ts-expect-error Recharts provides tick props at runtime
                 tick={<CustomizedMMPTick />}
                 interval={0}
                 height={40}

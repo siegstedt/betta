@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
   LineChart,
   Line,
@@ -20,7 +21,7 @@ const formatDuration = (seconds: number): string => {
   return `${seconds / 60}m`;
 };
 
-const CustomizedMMPTick = (props: any) => {
+const CustomizedMMPTick: React.FC<RechartsTickProps> = (props) => {
   const { x, y, payload } = props;
   const duration = payload.value as number;
 
@@ -77,10 +78,10 @@ export default function MmpCurveChart({ data }: MmpCurveChartProps) {
         />
         <XAxis
           dataKey="duration"
-          type="number"
-          scale="log"
-          domain={['dataMin', 'dataMax']}
+          type="category"
+          // @ts-expect-error Recharts provides tick props at runtime
           tick={<CustomizedMMPTick />}
+          interval={0}
           height={40}
         />
         <YAxis

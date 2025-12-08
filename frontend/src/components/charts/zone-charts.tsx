@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   ZoneAnalysisData,
   Activity,
@@ -156,7 +156,12 @@ const ZONE_COLORS = [
   'var(--chart-color-15)',
   'var(--chart-color-16)',
 ];
-const CustomizedYAxisTick = (props: any) => {
+const CustomizedYAxisTick: React.FC<
+  RechartsTickProps & {
+    threshold?: number | null;
+    definitions: Record<string, number>;
+  }
+> = (props) => {
   const { x, y, payload, threshold, definitions } = props;
   const zoneName = payload.value as string;
   const zoneKey = Object.keys(definitions).find((key) =>
@@ -196,7 +201,9 @@ const CustomizedYAxisTick = (props: any) => {
     </g>
   );
 };
-const CustomizedBarLabel = (props: any) => {
+const CustomizedBarLabel: React.FC<
+  RechartsBarLabelProps & { totalTime: number }
+> = (props) => {
   const { x, y, width, value, totalTime } = props;
   const percentage = totalTime > 0 ? ((value / totalTime) * 100).toFixed(0) : 0;
   const formattedTime = formatDuration(value);
@@ -260,9 +267,7 @@ const ZoneChart = ({
       >
         <XAxis type="number" tickFormatter={(time) => formatDuration(time)} />
         <YAxis
-          type="category"
-          dataKey="name"
-          width={100}
+          // @ts-expect-error Recharts provides tick props at runtime
           tick={
             <CustomizedYAxisTick
               threshold={threshold}
