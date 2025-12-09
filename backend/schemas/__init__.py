@@ -1,10 +1,19 @@
 from .activity import (
     Activity,
+    ActivityBase,
     ActivityCreateManual,
+    ActivityLap,
+    ActivityLapBase,
+    ActivityListResponse,
+    ActivityRecord,
+    ActivityRecordBase,
     ActivitySummary,
     ActivityUpdate,
+    ChartDataPoint,
+    DailyActivity,
     RecentActivityResponse,
     VisualActivityLogResponse,
+    WeeklyActivityData,
 )
 from .athlete import (
     AthleteCreate,
@@ -18,22 +27,36 @@ from .equipment import (
 )
 from .performance import (
     AthleteMetric,
+    AthleteMetricBase,
     AthleteMetricCreate,
     DailyAggregate,
     DailyPerformanceMetric,
+    DailyPerformanceMetricBase,
     PotentialPerformanceMarker,
+    PotentialPerformanceMarkerBase,
+    PotentialPerformanceMarkerCreate,
     WeeklyWorkload,
+    WeeklyWorkloadDataPoint,
     ZoneAnalysis,
 )
 
 __all__ = [
     # Activity schemas
     "Activity",
+    "ActivityBase",
     "ActivityCreateManual",
+    "ActivityLap",
+    "ActivityLapBase",
+    "ActivityListResponse",
+    "ActivityRecord",
+    "ActivityRecordBase",
     "ActivitySummary",
     "ActivityUpdate",
+    "ChartDataPoint",
+    "DailyActivity",
     "RecentActivityResponse",
     "VisualActivityLogResponse",
+    "WeeklyActivityData",
     # Athlete schemas
     "AthleteCreate",
     "AthleteResponse",
@@ -44,10 +67,15 @@ __all__ = [
     "EquipmentUpdate",
     # Performance schemas
     "AthleteMetric",
+    "AthleteMetricBase",
     "AthleteMetricCreate",
     "DailyAggregate",
     "DailyPerformanceMetric",
+    "DailyPerformanceMetricBase",
     "PotentialPerformanceMarker",
+    "PotentialPerformanceMarkerBase",
+    "PotentialPerformanceMarkerCreate",
     "WeeklyWorkload",
+    "WeeklyWorkloadDataPoint",
     "ZoneAnalysis",
 ]
