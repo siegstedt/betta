@@ -35,3 +35,4 @@ class Athlete(AthleteBase):
     equipment: List[Equipment] = []
     model_config = ConfigDict(from_attributes=True)
 
+Athlete.update_forward_refs()

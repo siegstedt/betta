@@ -148,3 +148,4 @@ class WeeklyActivityData(BaseModel):
 
 class VisualActivityLogResponse(BaseModel):
     weeks: List[WeeklyActivityData]
+ActivityWithAthlete.update_forward_refs()
