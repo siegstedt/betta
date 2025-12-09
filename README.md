@@ -1,10 +1,7 @@
-# betta
-
 [![CI](https://github.com/siegstedt/betta/actions/workflows/ci.yml/badge.svg)](https://github.com/siegstedt/betta/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-![Betta Logo](frontend/assets/logo.png)
-
+![Betta Logo](frontend/public/logo.png)
 *get betta. get better.*
 
 `betta` is a comprehensive, open-source training and performance analysis platform for data-driven cyclists and coaches. Built with a state-of-the-art technology stack, it provides the tools to upload, analyze, plan, and adapt training to achieve peak performance.
