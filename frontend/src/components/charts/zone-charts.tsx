@@ -163,7 +163,7 @@ const CustomizedYAxisTick = (
   }
 ) => {
   const { x, y, payload, threshold, definitions } = props;
-  const zoneName = payload.value as string;
+  const zoneName = String(payload.value);
   const zoneKey = Object.keys(definitions).find((key) =>
     key.startsWith(zoneName)
   );
@@ -266,7 +266,15 @@ const ZoneChart = ({
         margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
       >
         <XAxis type="number" tickFormatter={(time) => formatDuration(time)} />
-        <YAxis tick={CustomizedYAxisTick as any} />
+        <YAxis
+          tick={(props) => (
+            <CustomizedYAxisTick
+              {...props}
+              threshold={threshold}
+              definitions={definitions}
+            />
+          )}
+        />
         <Tooltip
           cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
           content={<CustomZoneTooltip details={details} />}

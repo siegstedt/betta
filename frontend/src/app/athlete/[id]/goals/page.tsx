@@ -1,11 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-
 export default function GoalsPage() {
-  const params = useParams();
-  const athleteId = params.id as string;
-
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
