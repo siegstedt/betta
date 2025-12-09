@@ -72,11 +72,10 @@ export default function ProfilePage() {
         new Date(b.date_established).getTime() -
         new Date(a.date_established).getTime()
     ) || [];
-  const sortedActivities =
-    athlete.activities.sort(
-      (a, b) =>
-        new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    ) || [];
+  const sortedActivities = (athlete.activities || []).sort(
+    (a, b) =>
+      new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+  );
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
