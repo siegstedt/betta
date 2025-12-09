@@ -68,6 +68,6 @@ class PotentialPerformanceMarker(Base):
     date_detected = Column(DateTime, nullable=False)
     status = Column(SQLAlchemyEnum(PotentialMarkerStatus, name='potential_marker_status_enum'), nullable=False, default=PotentialMarkerStatus.PENDING)
 
-    athlete: Mapped["Athlete"] = relationship(back_populates="potential_markers")
-    activity: Mapped["Activity"] = relationship(back_populates="potential_markers")
+    athlete = relationship("Athlete", back_populates="potential_markers")
+    activity = relationship("Activity", back_populates="potential_markers")
 
