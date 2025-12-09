@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 
+# Coverage reports
+.coverage
+
 # User-uploaded data
 fit_files/
 
