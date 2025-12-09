@@ -1,4 +1,81 @@
-from .activity import *
-from .athlete import *
-from .equipment import *
-from .performance import *
+from .activity import (
+    create_activity_with_records,
+    create_manual_activity,
+    delete_activity,
+    get_activities_by_athlete,
+    get_activity,
+    get_recent_activities,
+    update_activity,
+)
+from .athlete import (
+    create_athlete,
+    delete_athlete,
+    get_athlete,
+    get_athletes,
+    update_athlete,
+    update_athlete_profile_picture,
+)
+from .equipment import (
+    create_equipment,
+    delete_equipment,
+    find_or_create_device,
+    get_equipment,
+    get_equipment_by_brand_model_type,
+    update_equipment,
+)
+from .performance import (
+    create_athlete_metric,
+    get_daily_activity_summary,
+    get_daily_aggregates_for_metric,
+    get_dual_data_aggregates,
+    get_latest_daily_metric,
+    get_latest_daily_metric_before_date,
+    get_latest_ftp,
+    get_latest_lthr,
+    get_latest_weight,
+    get_metric_history,
+    get_pending_markers,
+    get_pmc_data,
+    get_power_records_for_date_range,
+    upsert_daily_metric,
+)
+
+__all__ = [
+    # Activity functions
+    "create_activity_with_records",
+    "create_manual_activity",
+    "delete_activity",
+    "get_activities_by_athlete",
+    "get_activity",
+    "get_recent_activities",
+    "update_activity",
+    # Athlete functions
+    "create_athlete",
+    "delete_athlete",
+    "get_athlete",
+    "get_athletes",
+    "update_athlete",
+    "update_athlete_profile_picture",
+    # Equipment functions
+    "create_equipment",
+    "delete_equipment",
+    "find_or_create_device",
+    "get_equipment",
+    "get_equipment_by_brand_model_type",
+    "update_equipment",
+    # Performance functions
+    "create_athlete_metric",
+    "get_daily_activity_summary",
+    "get_daily_aggregates_for_metric",
+    "get_dual_data_aggregates",
+    "get_latest_daily_metric",
+    "get_latest_daily_metric_before_date",
+    "get_latest_ftp",
+    "get_latest_lthr",
+    "get_latest_weight",
+    "get_metric_history",
+    "get_pending_markers",
+    "get_pmc_data",
+    "get_power_records_for_date_range",
+    "upsert_daily_metric",
+]

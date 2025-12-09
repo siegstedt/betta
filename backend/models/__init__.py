@@ -9,3 +9,18 @@ from .athlete import Athlete
 from .equipment import Equipment, EquipmentType
 from .performance import AthleteMetric, DailyPerformanceMetric, MetricType, PotentialPerformanceMarker, PotentialMarkerStatus
 
+__all__ = [
+    "Base",
+    "Activity",
+    "ActivityRecord",
+    "ActivityLap",
+    "Athlete",
+    "Equipment",
+    "EquipmentType",
+    "AthleteMetric",
+    "DailyPerformanceMetric",
+    "MetricType",
+    "PotentialPerformanceMarker",
+    "PotentialMarkerStatus",
+]
+

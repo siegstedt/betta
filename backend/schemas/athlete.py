@@ -3,6 +3,7 @@ from datetime import date, datetime
 from typing import List, Optional
 from .performance import AthleteMetric
 from .equipment import Equipment
+from .activity import ActivitySummary
 
 class AthleteBase(BaseModel):
     first_name: str
@@ -24,6 +25,7 @@ class AthleteResponse(AthleteBase):
     athlete_id: int
     created_at: datetime
     metrics: List[AthleteMetric] = []
+    activities: List[ActivitySummary] = []
     psf_trimp: float
     psf_pss: float
     equipment: List[Equipment] = []

@@ -1,11 +1,10 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
 from .equipment import Equipment
 
-if TYPE_CHECKING:
-    from .athlete import AthleteSummary
+
 
 # --- ActivityRecord ---
 class ActivityRecordBase(BaseModel):
