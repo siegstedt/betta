@@ -6,6 +6,20 @@ import models
 import schemas
 import services
 
+
+def get_recent_activities(db: Session, limit: int = 20):
+    """
+    Get recent activities from all athletes, ordered by start_time descending.
+    """
+    activities = (
+        db.query(models.Activity)
+        .options(joinedload(models.Activity.athlete))
+        .order_by(desc(models.Activity.start_time))
+        .limit(limit)
+        .all()
+    )
+    return activities
+
 def create_activity_with_records(
     db: Session, 
     activity: schemas.ActivityBase, 

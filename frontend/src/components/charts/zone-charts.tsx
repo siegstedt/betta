@@ -156,12 +156,12 @@ const ZONE_COLORS = [
   'var(--chart-color-15)',
   'var(--chart-color-16)',
 ];
-const CustomizedYAxisTick: React.FC<
-  RechartsTickProps & {
+const CustomizedYAxisTick = (
+  props: RechartsTickProps & {
     threshold?: number | null;
     definitions: Record<string, number>;
   }
-> = (props) => {
+) => {
   const { x, y, payload, threshold, definitions } = props;
   const zoneName = payload.value as string;
   const zoneKey = Object.keys(definitions).find((key) =>
@@ -266,15 +266,7 @@ const ZoneChart = ({
         margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
       >
         <XAxis type="number" tickFormatter={(time) => formatDuration(time)} />
-        <YAxis
-          // @ts-expect-error Recharts provides tick props at runtime
-          tick={
-            <CustomizedYAxisTick
-              threshold={threshold}
-              definitions={definitions}
-            />
-          }
-        />
+        <YAxis tick={CustomizedYAxisTick as any} />
         <Tooltip
           cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
           content={<CustomZoneTooltip details={details} />}

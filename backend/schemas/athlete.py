@@ -1,10 +1,12 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from .performance import AthleteMetric
-from .activity import ActivitySummary
 from .equipment import Equipment
+
+if TYPE_CHECKING:
+    from .activity import ActivitySummary
 
 class AthleteBase(BaseModel):
     first_name: str
@@ -18,13 +20,18 @@ class AthleteCreate(AthleteBase):
 class AthleteUpdate(AthleteBase):
     pass
 
+class AthleteSummary(AthleteBase):
+    athlete_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
 class Athlete(AthleteBase):
     athlete_id: int
     created_at: datetime
     metrics: List[AthleteMetric] = []
     psf_trimp: float
     psf_pss: float
-    activities: List[ActivitySummary] = []
+    activities: List["ActivitySummary"] = []
     equipment: List[Equipment] = []
     model_config = ConfigDict(from_attributes=True)
 

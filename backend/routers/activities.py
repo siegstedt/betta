@@ -12,6 +12,13 @@ import services
 from database import get_db
 
 
+@router.get("/activities/recent", response_model=List[schemas.ActivityWithAthlete])
+def read_recent_activities(limit: int = 20, db: Session = Depends(get_db)):
+    """Returns a list of recent activities from all athletes."""
+    activities = crud.get_recent_activities(db, limit=limit)
+    return activities
+
+
 router = APIRouter(
     tags=["Activities"],
 )

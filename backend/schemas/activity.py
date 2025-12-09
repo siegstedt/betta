@@ -1,8 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from .equipment import Equipment
+
+if TYPE_CHECKING:
+    from .athlete import AthleteSummary
 
 # --- ActivityRecord ---
 class ActivityRecordBase(BaseModel):
@@ -113,6 +116,11 @@ class Activity(ActivitySummary):
     shoe: Optional[Equipment] = None
     device: Optional[Equipment] = None
     trainer: Optional[Equipment] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ActivityWithAthlete(ActivitySummary):
+    athlete: "AthleteSummary"
     model_config = ConfigDict(from_attributes=True)
 
 

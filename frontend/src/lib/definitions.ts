@@ -1,6 +1,13 @@
 // These types mirror the Pydantic schemas from the backend API.
 // Keeping them in a central file ensures type consistency across the frontend.
 
+export type AthleteSummary = {
+  athlete_id: number;
+  first_name: string;
+  last_name: string;
+  profile_picture_url?: string;
+};
+
 export type Athlete = {
   athlete_id: number;
   first_name: string;
@@ -214,6 +221,10 @@ export type VisualActivityLogResponse = {
 // API Response types (may differ from domain types)
 export type ApiAthleteResponse = Athlete;
 export type ApiActivityResponse = Activity;
+export type ActivityWithAthlete = ActivitySummary & {
+  athlete: AthleteSummary;
+};
+
 export type ApiActivitiesResponse = ActivitySummary[];
 export type ApiPmcResponse = DailyPerformanceMetric[];
 export type ApiMmpCurveResponse = { duration: number; power: number }[];
