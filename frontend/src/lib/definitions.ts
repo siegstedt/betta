@@ -222,7 +222,9 @@ export type VisualActivityLogResponse = {
 export type ApiAthleteResponse = Athlete;
 export type ApiActivityResponse = Activity;
 export type ActivityWithAthlete = ActivitySummary & {
-  athlete: AthleteSummary;
+  athlete_id: number;
+  athlete_first_name: string;
+  athlete_last_name: string;
 };
 
 export type ApiActivitiesResponse = ActivitySummary[];
