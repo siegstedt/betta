@@ -177,19 +177,19 @@ def test_calculate_time_in_zones_power_valid():
     data_stream = [50, 70, 90, 110, 130, 150, 170, 190, 210, 230]
     ftp = 100
     # Zone 1: <55 (50) -> 1
-    # Zone 2: 56-75 (70) -> 1
-    # Zone 3: 76-90 (90) -> 1
-    # Zone 4: 91-105 (110) -> 1
-    # Zone 5: 106-120 (130) -> 1
-    # Zone 6: 121-150 (150) -> 1
-    # Zone 7: >150 (170, 190, 210, 230) -> 4
+    # Zone 2: <76 (70) -> 1
+    # Zone 3: <91 (90) -> 1
+    # Zone 4: <106 (no values) -> 0
+    # Zone 5: <121 (110) -> 1
+    # Zone 6: <151 (130, 150) -> 2
+    # Zone 7: >=151 (170, 190, 210, 230) -> 4
     expected_zones = {
         "Zone 1: Active Recovery": 1,
         "Zone 2: Endurance": 1,
         "Zone 3: Tempo": 1,
-        "Zone 4: Threshold": 1,
+        "Zone 4: Threshold": 0,
         "Zone 5: VO2 Max": 1,
-        "Zone 6: Anaerobic": 1,
+        "Zone 6: Anaerobic": 2,
         "Zone 7: Neuromuscular": 4,
     }
     result = calculate_time_in_zones(data_stream, ftp, POWER_ZONE_DEFINITIONS)
@@ -315,18 +315,16 @@ def test_calculate_historical_mmp_valid_data():
 def test_calculate_historical_mmp_with_none_values():
     power_data = [100, 110, None, 130, 140, 150, 160, 170, 180, 190, 200]  # 11 seconds
     intervals = [1, 5, 10]
-    # Pandas rolling mean handles NaNs by default, so the results should be similar
-    # but might differ slightly if NaNs cause windows to be skipped or averaged differently.
-    # For this test, we'll assume the function handles it gracefully and produces reasonable output.
+    # Pandas rolling mean handles NaNs by skipping windows that contain NaN values.
+    # For interval 10, most windows contain the None value, so no valid results are produced.
     result = calculate_historical_mmp(power_data, intervals)
-    assert len(result) == 3
+    assert len(result) == 2  # Only intervals 1 and 5 produce valid results
     assert result[0]["power"] == 200
     assert result[1]["power"] == 180
-    assert result[2]["power"] == 155
 
 
 # --- Test recalculate_pmc_from_date ---
-@patch("backend.services.calculations.crud")
+@patch("services.calculations.crud")
 def test_recalculate_pmc_from_date_no_previous_metrics(mock_crud):
     mock_db = MagicMock()
     athlete_id = 1
@@ -341,7 +339,7 @@ def test_recalculate_pmc_from_date_no_previous_metrics(mock_crud):
     ]
 
     # Mock date.today() to control the loop
-    with patch("backend.services.calculations.date") as mock_date:
+    with patch("services.calculations.date") as mock_date:
         mock_date.today.return_value = date(2023, 1, 3)
         mock_date.side_effect = lambda *args, **kw: date(
             *args, **kw
@@ -368,7 +366,7 @@ def test_recalculate_pmc_from_date_no_previous_metrics(mock_crud):
     assert kwargs["tss"] == 10
 
 
-@patch("backend.services.calculations.crud")
+@patch("services.calculations.crud")
 def test_recalculate_pmc_from_date_with_previous_metrics(mock_crud):
     mock_db = MagicMock()
     athlete_id = 1
@@ -382,7 +380,7 @@ def test_recalculate_pmc_from_date_with_previous_metrics(mock_crud):
         {"total_tss": 10, "avg_if": 0.4},
     ]
 
-    with patch("backend.services.calculations.date") as mock_date:
+    with patch("services.calculations.date") as mock_date:
         mock_date.today.return_value = date(2023, 1, 6)
         mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
 
