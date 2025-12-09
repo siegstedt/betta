@@ -77,6 +77,17 @@ class ActivitySummary(ActivityBase):
     athlete_id: int
     model_config = ConfigDict(from_attributes=True)
 
+class ActivityListResponse(BaseModel):
+    """Simplified activity response for listings"""
+    activity_id: int
+    name: str
+    sport: Optional[str] = None
+    start_time: datetime
+    total_distance: Optional[float] = None
+    total_moving_time: Optional[int] = None
+    average_power: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
 class ActivityUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -118,9 +129,10 @@ class Activity(ActivitySummary):
     trainer: Optional[Equipment] = None
     model_config = ConfigDict(from_attributes=True)
 
-
-class ActivityWithAthlete(ActivitySummary):
-    athlete: "AthleteSummary"
+class RecentActivityResponse(ActivitySummary):
+    athlete_id: int
+    athlete_first_name: str
+    athlete_last_name: str
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -148,4 +160,3 @@ class WeeklyActivityData(BaseModel):
 
 class VisualActivityLogResponse(BaseModel):
     weeks: List[WeeklyActivityData]
-ActivityWithAthlete.update_forward_refs()

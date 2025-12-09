@@ -11,17 +11,56 @@ import schemas
 import services
 from database import get_db
 
-
-@router.get("/activities/recent", response_model=List[schemas.ActivityWithAthlete])
-def read_recent_activities(limit: int = 20, db: Session = Depends(get_db)):
-    """Returns a list of recent activities from all athletes."""
-    activities = crud.get_recent_activities(db, limit=limit)
-    return activities
-
-
 router = APIRouter(
     tags=["Activities"],
 )
+
+@router.get("/activities/recent", response_model=List[schemas.RecentActivityResponse])
+def read_recent_activities(limit: int = 20, db: Session = Depends(get_db)):
+    """Returns a list of recent activities from all athletes."""
+    activities = crud.get_recent_activities(db, limit=limit)
+    # Convert to response format
+    result = []
+    for activity in activities:
+        # Create response with activity data and athlete info
+        response = schemas.RecentActivityResponse(
+            activity_id=activity.activity_id,
+            name=activity.name,
+            sport=activity.sport,
+            sub_sport=activity.sub_sport,
+            ride_type=activity.ride_type,
+            bike_id=activity.bike_id,
+            shoe_id=activity.shoe_id,
+            device_id=activity.device_id,
+            trainer_id=activity.trainer_id,
+            description=activity.description,
+            start_time=activity.start_time,
+            total_moving_time=activity.total_moving_time,
+            total_elapsed_time=activity.total_elapsed_time,
+            total_distance=activity.total_distance,
+            total_elevation_gain=activity.total_elevation_gain,
+            average_speed=activity.average_speed,
+            max_speed=activity.max_speed,
+            average_cadence=activity.average_cadence,
+            max_cadence=activity.max_cadence,
+            average_heart_rate=activity.average_heart_rate,
+            max_heart_rate=activity.max_heart_rate,
+            average_power=activity.average_power,
+            max_power=activity.max_power,
+            normalized_power=activity.normalized_power,
+            total_calories=activity.total_calories,
+            perceived_exertion=activity.perceived_exertion,
+            perceived_strain_score=activity.perceived_strain_score,
+            trimp=activity.trimp,
+            intensity_factor=activity.intensity_factor,
+            unified_training_load=activity.unified_training_load,
+            tss=activity.tss,
+            athlete_id=activity.athlete.athlete_id,
+            athlete_first_name=activity.athlete.first_name,
+            athlete_last_name=activity.athlete.last_name
+        )
+        result.append(response)
+    return result
 
 @router.get("/athlete/{athlete_id}/activities", response_model=Tuple[List[schemas.ActivitySummary], int])
 def read_athlete_activities(
