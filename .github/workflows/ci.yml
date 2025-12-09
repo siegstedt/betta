@@ -35,5 +35,7 @@ jobs:
       run: cd backend && ruff check .
     - name: Check backend formatting
       run: cd backend && ruff format --check .
+    - name: Start database
+      run: docker compose up -d db
     - name: Run backend tests
-      run: docker-compose run --rm backend pytest
+      run: docker compose run --rm backend pytest
