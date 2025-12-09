@@ -11,7 +11,15 @@ interface AthletePanelProps {
 export function AthletePanel({ athletes }: AthletePanelProps) {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Athletes</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Athletes</h2>
+        <Link
+          href="/athlete/new"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          + add new
+        </Link>
+      </div>
       {athletes.length === 0 ? (
         <p className="text-muted-foreground">No athletes</p>
       ) : (

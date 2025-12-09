@@ -67,7 +67,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen">
-      <Header showAddAthlete />
+      <Header />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
