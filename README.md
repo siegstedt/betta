@@ -1,17 +1,22 @@
 # betta
 
+[![CI](https://github.com/siegstedt/betta/actions/workflows/ci.yml/badge.svg)](https://github.com/siegstedt/betta/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+![Betta Logo](frontend/assets/logo.png)
+
 *get betta. get better.*
 
 `betta` is a comprehensive, open-source training and performance analysis platform for data-driven cyclists and coaches. Built with a state-of-the-art technology stack, it provides the tools to upload, analyze, plan, and adapt training to achieve peak performance.
 
 ## Table of Contents
 
-1. [Core Features](https://www.google.com/search?q=%23-core-features)
-2. [Application Structure](https://www.google.com/search?q=%23-application-structure)
-3. [Tech Stack](https://www.google.com/search?q=%23-tech-stack)
-4. [Getting Started](https://www.google.com/search?q=%23-getting-started)
-5. [Project Roadmap](https://www.google.com/search?q=%23-project-roadmap)
-6. [Contributing](https://www.google.com/search?q=%23-contributing)
+1. [Core Features](#core-features)
+2. [Application Structure](#application-structure)
+3. [Tech Stack](#tech-stack)
+4. [Getting Started](#getting-started)
+5. [Project Roadmap](#project-roadmap)
+6. [Contributing](#contributing)
 
 -----
 
@@ -106,7 +111,7 @@ You can get a full local development environment running with a single command.
 4. **Build and run the containers:**
 
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
 
     This will start the frontend, backend, and database services.
