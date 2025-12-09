@@ -6,12 +6,14 @@ import crud
 
 # --- Perceived Strain Score (PSS) based on Perceived Exertion ---
 
+
 def calculate_pss(rpe: int, duration_seconds: int) -> int:
     """Calculates Perceived Strain Score (PSS) from RPE and duration."""
     if not rpe or rpe <= 0 or duration_seconds <= 0:
         return 0
     duration_minutes = duration_seconds / 60
     return int(round(rpe * duration_minutes))
+
 
 # --- Heart Rate Zones-based TRIMP ---
 
@@ -24,20 +26,23 @@ TRIMP_ZONE_WEIGHTS = {
     "Zone 6: Anaerobic Capacity": 6.0,
 }
 
+
 def calculate_trimp(time_in_hr_zones: dict) -> int:
     """Calculates zone-based TRIMP (zTRIMP) from time spent in HR zones."""
     total_trimp = 0
     if not time_in_hr_zones:
         return 0
-    
+
     for zone_name, time_seconds in time_in_hr_zones.items():
         weight = TRIMP_ZONE_WEIGHTS.get(zone_name, 0)
         time_minutes = time_seconds / 60
         total_trimp += time_minutes * weight
-        
+
     return int(round(total_trimp))
 
+
 # --- Normalized Power and TSS Calculations ---
+
 
 def calculate_normalized_power(power_data: list[int]) -> int:
     """
@@ -122,6 +127,7 @@ def calculate_tss(normalized_power: int, ftp: int, duration_seconds: int) -> int
 # 55,138,219,300,382,463,545,626,708,789,871
 # 60,150,239,328,417,506,594,683,772,861,950
 
+
 def estimate_power_tacx(speed_kmh: float, setting: int) -> float:
     """
     Estimates power output for a Tacx Blue Motion T2600 trainer
@@ -133,9 +139,9 @@ def estimate_power_tacx(speed_kmh: float, setting: int) -> float:
 
     Returns:
       The estimated power in watts.
-      
+
     Raises:
-        ValueError: If the provided setting is not available in the power curves.      
+        ValueError: If the provided setting is not available in the power curves.
     """
     if not 1 <= setting <= 10:
         raise ValueError("Setting must be between 1 and 10")
@@ -145,7 +151,7 @@ def estimate_power_tacx(speed_kmh: float, setting: int) -> float:
     # a = a_base + (setting - 1) * a_delta
     # a_base = 2.5 (from 150W / 60kmh)
     # a_delta = ((950/60) - (150/60)) / 9 = 1.4815
-    
+
     a_coefficient = 2.5 + (setting - 1) * 1.4815
 
     power = a_coefficient * speed_kmh
@@ -158,12 +164,12 @@ POWER_ZONE_DEFINITIONS = {
     # Zone: (% of FTP upper bound)
     # Coggan's zones are inclusive, so 56-75% means upper bound is < 76%
     "Zone 1: Active Recovery": 0.55,
-    "Zone 2: Endurance": 0.76, 
+    "Zone 2: Endurance": 0.76,
     "Zone 3: Tempo": 0.91,
     "Zone 4: Threshold": 1.06,
     "Zone 5: VO2 Max": 1.21,
     "Zone 6: Anaerobic": 1.51,
-    "Zone 7: Neuromuscular": float('inf'), 
+    "Zone 7: Neuromuscular": float("inf"),
 }
 
 HR_ZONE_DEFINITIONS = {
@@ -173,40 +179,42 @@ HR_ZONE_DEFINITIONS = {
     "Zone 3: Tempo": 0.94,
     "Zone 4: Sub-Threshold": 1.00,
     "Zone 5: Super-Threshold (VO2 Max)": 1.06,
-    "Zone 6: Anaerobic Capacity": float('inf'),
+    "Zone 6: Anaerobic Capacity": float("inf"),
 }
 
 
 def calculate_time_in_zones(
-    data_stream: list[int],
-    threshold: int,
-    zone_definitions: dict
+    data_stream: list[int], threshold: int, zone_definitions: dict
 ) -> dict[str, int]:
     """
     Calculates the total time in seconds spent in each physiological zone.
     """
     if not threshold or not data_stream:
         return {zone_name: 0 for zone_name in zone_definitions}
-    
+
     zones = {zone_name: 0 for zone_name in zone_definitions}
-    for value in data_stream:    
+    for value in data_stream:
         if value is None:
             continue
-    
+
         percent_of_threshold = value / threshold
         for zone_name, upper_bound in zone_definitions.items():
             if percent_of_threshold < upper_bound:
                 zones[zone_name] += 1
                 break
 
-    return zones 
+    return zones
+
 
 # --- Performance Management Chart (PMC) Calculations ---
 
 CTL_TC = 42  # Chronic Training Load time constant
-ATL_TC = 7   # Acute Training Load time constant
+ATL_TC = 7  # Acute Training Load time constant
 
-def calculate_daily_pmc(ctl_yesterday: float, atl_yesterday: float, tss_today: int) -> dict:
+
+def calculate_daily_pmc(
+    ctl_yesterday: float, atl_yesterday: float, tss_today: int
+) -> dict:
     """
     Calculates CTL, ATL, and TSB for a single day based on yesterday's state.
     """
@@ -240,13 +248,15 @@ def recalculate_pmc_from_date(db, athlete_id: int, start_recalc_date: date):
     """
     Recalculates all PMC data for an athlete from a specific date forward.
     This handles historical uploads, deleted activities, and data corrections.
-    
+
     NOTE: This function is imported and used by routers/activities.py. It is placed
     here to keep all performance calculation logic together.
     """
     # 1. Get the state (CTL/ATL) on the day *before* the recalculation starts.
-    metric_before_start = crud.get_latest_daily_metric_before_date(db, athlete_id, start_recalc_date)
-    
+    metric_before_start = crud.get_latest_daily_metric_before_date(
+        db, athlete_id, start_recalc_date
+    )
+
     if metric_before_start:
         current_ctl = metric_before_start.ctl
         current_atl = metric_before_start.atl
@@ -256,7 +266,7 @@ def recalculate_pmc_from_date(db, athlete_id: int, start_recalc_date: date):
     # 2. Determine the full range to recalculate.
     last_metric = crud.get_latest_daily_metric(db, athlete_id)
     today = date.today()
-    
+
     end_recalc_date = today
     if last_metric and last_metric.date > today:
         end_recalc_date = last_metric.date
@@ -265,11 +275,20 @@ def recalculate_pmc_from_date(db, athlete_id: int, start_recalc_date: date):
     current_date = start_recalc_date
     while current_date <= end_recalc_date:
         daily_summary = crud.get_daily_activity_summary(db, athlete_id, current_date)
-        pmc_values = calculate_daily_pmc(current_ctl, current_atl, daily_summary['total_tss'])
-        crud.upsert_daily_metric(db, athlete_id=athlete_id, date=current_date, **pmc_values, tss=daily_summary['total_tss'], if_avg=daily_summary['avg_if'])
-        current_ctl, current_atl = pmc_values['ctl'], pmc_values['atl']
+        pmc_values = calculate_daily_pmc(
+            current_ctl, current_atl, daily_summary["total_tss"]
+        )
+        crud.upsert_daily_metric(
+            db,
+            athlete_id=athlete_id,
+            date=current_date,
+            **pmc_values,
+            tss=daily_summary["total_tss"],
+            if_avg=daily_summary["avg_if"],
+        )
+        current_ctl, current_atl = pmc_values["ctl"], pmc_values["atl"]
         current_date += timedelta(days=1)
-    
+
     db.commit()
 
 
@@ -299,8 +318,4 @@ def find_best_n_minute_average(data_stream: list, interval_minutes: int) -> dict
     end_index = int(rolling_avg.idxmax())
     start_index = end_index - interval_seconds + 1
 
-    return {
-        "max_average": max_avg,
-        "start_index": start_index,
-        "end_index": end_index
-    }
+    return {"max_average": max_avg, "start_index": start_index, "end_index": end_index}

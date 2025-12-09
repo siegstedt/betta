@@ -15,6 +15,7 @@ router = APIRouter(
     tags=["Activities"],
 )
 
+
 @router.get("/activities/recent", response_model=List[schemas.RecentActivityResponse])
 def read_recent_activities(limit: int = 20, db: Session = Depends(get_db)):
     """Returns a list of recent activities from all athletes."""
@@ -57,12 +58,16 @@ def read_recent_activities(limit: int = 20, db: Session = Depends(get_db)):
             tss=activity.tss,
             athlete_id=activity.athlete.athlete_id,
             athlete_first_name=activity.athlete.first_name,
-            athlete_last_name=activity.athlete.last_name
+            athlete_last_name=activity.athlete.last_name,
         )
         result.append(response)
     return result
 
-@router.get("/athlete/{athlete_id}/activities", response_model=Tuple[List[schemas.ActivitySummary], int])
+
+@router.get(
+    "/athlete/{athlete_id}/activities",
+    response_model=Tuple[List[schemas.ActivitySummary], int],
+)
 def read_athlete_activities(
     athlete_id: int,
     skip: int = 0,
@@ -72,7 +77,7 @@ def read_athlete_activities(
     ride_type: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Returns a list of all activities (summary view) for a given athlete."""
     db_athlete = crud.get_athlete(db, athlete_id=athlete_id)
@@ -80,15 +85,24 @@ def read_athlete_activities(
         raise HTTPException(status_code=404, detail="Athlete not found")
 
     activities, total_count = crud.get_activities_by_athlete(
-        db, athlete_id=athlete_id, skip=skip, limit=limit,
-        sport=sport, sub_sport=sub_sport, ride_type=ride_type,
-        start_date=start_date, end_date=end_date
+        db,
+        athlete_id=athlete_id,
+        skip=skip,
+        limit=limit,
+        sport=sport,
+        sub_sport=sub_sport,
+        ride_type=ride_type,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     return activities, total_count
 
 
-@router.get("/athlete/{athlete_id}/visual-activity-log", response_model=schemas.VisualActivityLogResponse)
+@router.get(
+    "/athlete/{athlete_id}/visual-activity-log",
+    response_model=schemas.VisualActivityLogResponse,
+)
 def read_visual_activity_log(
     athlete_id: int,
     metric: str = "moving_time",  # moving_time, distance, unified_training_load
@@ -97,7 +111,7 @@ def read_visual_activity_log(
     ride_type: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Returns activities grouped by weeks for visual bubble chart display."""
     db_athlete = crud.get_athlete(db, athlete_id=athlete_id)
@@ -107,17 +121,28 @@ def read_visual_activity_log(
     # Validate metric parameter
     valid_metrics = ["moving_time", "distance", "unified_training_load"]
     if metric not in valid_metrics:
-        raise HTTPException(status_code=400, detail=f"Invalid metric. Must be one of: {', '.join(valid_metrics)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid metric. Must be one of: {', '.join(valid_metrics)}",
+        )
 
     # Get activities with filters
     activities, _ = crud.get_activities_by_athlete(
-        db, athlete_id=athlete_id, skip=0, limit=10000,  # Get all activities for the period
-        sport=sport, sub_sport=sub_sport, ride_type=ride_type,
-        start_date=start_date, end_date=end_date
+        db,
+        athlete_id=athlete_id,
+        skip=0,
+        limit=10000,  # Get all activities for the period
+        sport=sport,
+        sub_sport=sub_sport,
+        ride_type=ride_type,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     # Process into weekly visual data
-    weekly_data = services.activity_processing.process_visual_activity_log(activities, metric)
+    weekly_data = services.activity_processing.process_visual_activity_log(
+        activities, metric
+    )
 
     return schemas.VisualActivityLogResponse(weeks=weekly_data)
 
@@ -133,17 +158,23 @@ def read_activity(activity_id: int, db: Session = Depends(get_db)):
 
 @router.put("/activity/{activity_id}", response_model=schemas.Activity)
 def update_activity_details(
-    activity_id: int, activity_data: schemas.ActivityUpdate, db: Session = Depends(get_db)
+    activity_id: int,
+    activity_data: schemas.ActivityUpdate,
+    db: Session = Depends(get_db),
 ):
     """Updates descriptive details of an activity."""
-    updated_activity = crud.update_activity(db=db, activity_id=activity_id, activity_data=activity_data)
+    updated_activity = crud.update_activity(
+        db=db, activity_id=activity_id, activity_data=activity_data
+    )
     if updated_activity is None:
         raise HTTPException(status_code=404, detail="Activity not found")
 
     # After updating activity, update scaling factors and PMC
     services.athlete_services.update_scaling_factors(db, updated_activity.athlete_id)
-    services.calculations.recalculate_pmc_from_date(db, updated_activity.athlete_id, updated_activity.start_time.date())
-    
+    services.calculations.recalculate_pmc_from_date(
+        db, updated_activity.athlete_id, updated_activity.start_time.date()
+    )
+
     return updated_activity
 
 
@@ -153,13 +184,13 @@ def delete_activity_endpoint(activity_id: int, db: Session = Depends(get_db)):
     activity_to_delete = crud.get_activity(db, activity_id)
     if not activity_to_delete:
         raise HTTPException(status_code=404, detail="Activity not found")
-    
+
     athlete_id = activity_to_delete.athlete_id
     activity_date = activity_to_delete.start_time.date()
 
     # This commits the deletion
     crud.delete_activity(db, activity_id=activity_id)
-    
+
     # Now, trigger a recalculation starting from the date of the deleted activity
     services.calculations.recalculate_pmc_from_date(db, athlete_id, activity_date)
     return Response(status_code=204)
@@ -170,51 +201,65 @@ def download_activity_file(activity_id: int, db: Session = Depends(get_db)):
     """Downloads the original .fit file for an activity."""
     db_activity = crud.get_activity(db, activity_id=activity_id)
     if not db_activity or not db_activity.fit_file_path:
-        raise HTTPException(status_code=404, detail="FIT file not found for this activity.")
-    
+        raise HTTPException(
+            status_code=404, detail="FIT file not found for this activity."
+        )
+
     if not os.path.exists(db_activity.fit_file_path):
         raise HTTPException(status_code=404, detail="File not found on server.")
 
     file_name = f"betta_activity_{activity_id}.fit"
-    return FileResponse(path=db_activity.fit_file_path, media_type='application/vnd.ant.fit', filename=file_name)
+    return FileResponse(
+        path=db_activity.fit_file_path,
+        media_type="application/vnd.ant.fit",
+        filename=file_name,
+    )
 
-@router.get("/activity/{activity_id}/zone-analysis", response_model=schemas.ZoneAnalysis)
+
+@router.get(
+    "/activity/{activity_id}/zone-analysis", response_model=schemas.ZoneAnalysis
+)
 def get_zone_analysis(activity_id: int, db: Session = Depends(get_db)):
     """Calculates and returns the time spent in power and heart rate zones."""
     activity = crud.get_activity(db, activity_id=activity_id)
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
-    
+
     power_data = [r.power for r in activity.records if r.power is not None]
     hr_data = [r.heart_rate for r in activity.records if r.heart_rate is not None]
-    
+
     # Get athlete's thresholds at the time of the activity
-    ftp_record = crud.get_latest_ftp(db, athlete_id=activity.athlete_id, activity_date=activity.start_time)
-    lthr_record = crud.get_latest_lthr(db, athlete_id=activity.athlete_id, activity_date=activity.start_time)
-    
+    ftp_record = crud.get_latest_ftp(
+        db, athlete_id=activity.athlete_id, activity_date=activity.start_time
+    )
+    lthr_record = crud.get_latest_lthr(
+        db, athlete_id=activity.athlete_id, activity_date=activity.start_time
+    )
+
     ftp = ftp_record[0] if ftp_record else None
     lthr = lthr_record[0] if lthr_record else None
-    
+
     power_zones = None
     if ftp and power_data:
         power_zones = services.calculations.calculate_time_in_zones(
             power_data, ftp, services.calculations.POWER_ZONE_DEFINITIONS
         )
-    
+
     hr_zones = None
     if lthr and hr_data:
         hr_zones = services.calculations.calculate_time_in_zones(
             hr_data, lthr, services.calculations.HR_ZONE_DEFINITIONS
         )
-    
-    return schemas.ZoneAnalysis(power_zones=power_zones, hr_zones=hr_zones, ftp=ftp, lthr=lthr)
+
+    return schemas.ZoneAnalysis(
+        power_zones=power_zones, hr_zones=hr_zones, ftp=ftp, lthr=lthr
+    )
 
 
 @router.post("/activity/upload/{athlete_id}", response_model=schemas.Activity)
 async def upload_activity(
-    athlete_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)):
+    athlete_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)
+):
     """
     Uploads a .fit file, parses it, performs calculations, and saves it to the database.
     """
@@ -222,8 +267,10 @@ async def upload_activity(
     if db_athlete is None:
         raise HTTPException(status_code=404, detail="Athlete not found")
 
-    if not file.filename.lower().endswith('.fit'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .fit file.")
+    if not file.filename.lower().endswith(".fit"):
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Please upload a .fit file."
+        )
 
     try:
         content = await file.read()
@@ -235,42 +282,48 @@ async def upload_activity(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        activity_data, record_dicts, lap_dicts, potential_markers = services.fit_parser.parse_fit_file(
-            content=content,
-            db=db,
-            athlete_id=athlete_id,
-            file_name=file.filename,
+        activity_data, record_dicts, lap_dicts, potential_markers = (
+            services.fit_parser.parse_fit_file(
+                content=content,
+                db=db,
+                athlete_id=athlete_id,
+                file_name=file.filename,
+            )
         )
 
         new_activity = crud.create_activity_with_records(
-            db=db, 
-            activity=activity_data, 
-            records=record_dicts, 
-            laps=lap_dicts, 
-            potential_markers=potential_markers, 
-            athlete_id=athlete_id, 
-            fit_file_path=file_path
+            db=db,
+            activity=activity_data,
+            records=record_dicts,
+            laps=lap_dicts,
+            potential_markers=potential_markers,
+            athlete_id=athlete_id,
+            fit_file_path=file_path,
         )
 
         # After creating activity, update scaling factors and PMC
         services.athlete_services.update_scaling_factors(db, athlete_id)
-        services.calculations.recalculate_pmc_from_date(db, athlete_id, new_activity.start_time.date())
+        services.calculations.recalculate_pmc_from_date(
+            db, athlete_id, new_activity.start_time.date()
+        )
 
-        return new_activity    
-    
+        return new_activity
+
     except fitparse.FitParseError as e:
         raise HTTPException(status_code=400, detail=f"Error parsing .fit file: {e}")
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))    
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        )
 
 
 @router.post("/activity/manual/{athlete_id}", response_model=schemas.Activity)
 def create_manual_activity(
     athlete_id: int,
     activity_data: schemas.ActivityCreateManual,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Creates a new activity from manually entered data for a specific athlete.
@@ -280,13 +333,13 @@ def create_manual_activity(
         raise HTTPException(status_code=404, detail="Athlete not found")
 
     new_activity = crud.create_manual_activity(
-        db=db,
-        activity_data=activity_data,
-        athlete_id=athlete_id
+        db=db, activity_data=activity_data, athlete_id=athlete_id
     )
 
     # After creating activity, update scaling factors and PMC
     services.athlete_services.update_scaling_factors(db, athlete_id)
-    services.calculations.recalculate_pmc_from_date(db, athlete_id, new_activity.start_time.date())
+    services.calculations.recalculate_pmc_from_date(
+        db, athlete_id, new_activity.start_time.date()
+    )
 
     return new_activity

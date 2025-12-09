@@ -20,20 +20,23 @@ def get_recent_activities(db: Session, limit: int = 20):
     )
     return activities
 
+
 def create_activity_with_records(
-    db: Session, 
-    activity: schemas.ActivityBase, 
-    records: list[dict], 
-    laps: list[dict], 
+    db: Session,
+    activity: schemas.ActivityBase,
+    records: list[dict],
+    laps: list[dict],
     potential_markers: list[schemas.PotentialPerformanceMarkerCreate],
-    athlete_id: int, 
-    fit_file_path: str
+    athlete_id: int,
+    fit_file_path: str,
 ):
     """
     Creates an Activity and bulk-inserts its associated records for efficiency.
     """
     # 1. Create the Activity object to get its ID
-    db_activity = models.Activity(**activity.model_dump(), athlete_id=athlete_id, fit_file_path=fit_file_path)
+    db_activity = models.Activity(
+        **activity.model_dump(), athlete_id=athlete_id, fit_file_path=fit_file_path
+    )
 
     db.add(db_activity)
     db.commit()
@@ -42,8 +45,8 @@ def create_activity_with_records(
     # 2. Add the new activity_id to each record dictionary
     if records:
         for record in records:
-            record['activity_id'] = db_activity.activity_id
-        
+            record["activity_id"] = db_activity.activity_id
+
         # 3. Perform a bulk insert of all records
         db.bulk_insert_mappings(models.ActivityRecord, records)
         db.commit()
@@ -51,8 +54,8 @@ def create_activity_with_records(
     # 4. Add the new activity_id to each lap dictionary
     if laps:
         for lap in laps:
-            lap['activity_id'] = db_activity.activity_id
-        
+            lap["activity_id"] = db_activity.activity_id
+
         # 5. Perform a bulk insert of all laps
         db.bulk_insert_mappings(models.ActivityLap, laps)
         db.commit()
@@ -63,17 +66,16 @@ def create_activity_with_records(
             db_marker = models.PotentialPerformanceMarker(
                 **marker_data.model_dump(),
                 athlete_id=athlete_id,
-                activity_id=db_activity.activity_id
+                activity_id=db_activity.activity_id,
             )
             db.add(db_marker)
         db.commit()
 
     return db_activity
 
+
 def create_manual_activity(
-    db: Session,
-    activity_data: schemas.ActivityCreateManual,
-    athlete_id: int
+    db: Session, activity_data: schemas.ActivityCreateManual, athlete_id: int
 ):
     """
     Creates a new activity from manually entered data.
@@ -112,7 +114,7 @@ def create_manual_activity(
         "heart_rate": activity_data.average_heart_rate,
         "cadence": activity_data.average_cadence,
         "speed": activity_data.average_speed,
-        "activity_id": db_activity.activity_id
+        "activity_id": db_activity.activity_id,
     }
     db_record = models.ActivityRecord(**record_data)
     db.add(db_record)
@@ -131,7 +133,7 @@ def get_activity(db: Session, activity_id: int):
             joinedload(models.Activity.bike),
             joinedload(models.Activity.shoe),
             joinedload(models.Activity.device),
-            joinedload(models.Activity.trainer)
+            joinedload(models.Activity.trainer),
         )
         .filter(models.Activity.activity_id == activity_id)
         .first()
@@ -147,7 +149,7 @@ def get_activities_by_athlete(
     sub_sport: str = None,
     ride_type: str = None,
     start_date: str = None,
-    end_date: str = None
+    end_date: str = None,
 ):
     query = db.query(models.Activity).filter(models.Activity.athlete_id == athlete_id)
 
@@ -164,12 +166,16 @@ def get_activities_by_athlete(
 
     total_count = query.count()
 
-    activities = query.order_by(desc(models.Activity.start_time)).offset(skip).limit(limit).all()
+    activities = (
+        query.order_by(desc(models.Activity.start_time)).offset(skip).limit(limit).all()
+    )
 
     return activities, total_count
 
 
-def update_activity(db: Session, activity_id: int, activity_data: schemas.ActivityUpdate):
+def update_activity(
+    db: Session, activity_id: int, activity_data: schemas.ActivityUpdate
+):
     db_activity = get_activity(db, activity_id=activity_id)
     if not db_activity:
         return None
@@ -181,18 +187,19 @@ def update_activity(db: Session, activity_id: int, activity_data: schemas.Activi
         setattr(db_activity, key, value)
 
     # If a trainer setting is provided, trigger virtual power calculation
-    if 'trainer_setting' in update_data and update_data['trainer_setting'] is not None:
+    if "trainer_setting" in update_data and update_data["trainer_setting"] is not None:
         services.activity_processing.recalculate_virtual_power(
-            db=db,
-            activity=db_activity,
-            trainer_setting=update_data['trainer_setting']
+            db=db, activity=db_activity, trainer_setting=update_data["trainer_setting"]
         )
 
     # If RPE was updated, recalculate PSS
-    if 'perceived_exertion' in update_data and db_activity.perceived_exertion is not None:
+    if (
+        "perceived_exertion" in update_data
+        and db_activity.perceived_exertion is not None
+    ):
         pss = services.calculations.calculate_pss(
             rpe=db_activity.perceived_exertion,
-            duration_seconds=db_activity.total_moving_time
+            duration_seconds=db_activity.total_moving_time,
         )
         db_activity.perceived_strain_score = pss
 
@@ -201,12 +208,16 @@ def update_activity(db: Session, activity_id: int, activity_data: schemas.Activi
     if db_activity.tss and db_activity.tss > 0:
         db_activity.unified_training_load = db_activity.tss
     elif db_activity.trimp and db_activity.trimp > 0:
-        db_activity.unified_training_load = int(round(db_activity.trimp * athlete.psf_trimp))
+        db_activity.unified_training_load = int(
+            round(db_activity.trimp * athlete.psf_trimp)
+        )
     elif db_activity.perceived_strain_score and db_activity.perceived_strain_score > 0:
-        db_activity.unified_training_load = int(round(db_activity.perceived_strain_score * athlete.psf_pss))
+        db_activity.unified_training_load = int(
+            round(db_activity.perceived_strain_score * athlete.psf_pss)
+        )
     else:
         db_activity.unified_training_load = 0
-                
+
     db.add(db_activity)
     db.commit()
     db.refresh(db_activity)
@@ -214,7 +225,11 @@ def update_activity(db: Session, activity_id: int, activity_data: schemas.Activi
 
 
 def delete_activity(db: Session, activity_id: int):
-    db_activity = db.query(models.Activity).filter(models.Activity.activity_id == activity_id).first()
+    db_activity = (
+        db.query(models.Activity)
+        .filter(models.Activity.activity_id == activity_id)
+        .first()
+    )
     if not db_activity:
         return None
 

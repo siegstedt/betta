@@ -8,7 +8,10 @@ import models
 import schemas
 from . import calculations
 
-def recalculate_virtual_power(db: Session, activity: models.Activity, trainer_setting: int):
+
+def recalculate_virtual_power(
+    db: Session, activity: models.Activity, trainer_setting: int
+):
     """
     Recalculates power for an activity's records using a virtual power model.
     Then, recalculates all power-dependent summary statistics for the activity.
@@ -16,7 +19,7 @@ def recalculate_virtual_power(db: Session, activity: models.Activity, trainer_se
     # 1. Check if power data is already present. If so, do nothing.
     # A simple check on average_power is a good heuristic.
     if activity.average_power is not None and activity.average_power > 0:
-        return activity 
+        return activity
 
     # 2. Iterate through records and calculate virtual power
     power_data = []
@@ -30,22 +33,29 @@ def recalculate_virtual_power(db: Session, activity: models.Activity, trainer_se
             power_data.append(record.power)
         else:
             power_data.append(0)
-    
+
     if not records_to_update:
-        return activity # No speed data to calculate from
+        return activity  # No speed data to calculate from
 
     # 3. Recalculate power-dependent summary statistics
     activity.average_power = int(sum(power_data) / len(power_data)) if power_data else 0
     activity.max_power = int(max(power_data)) if power_data else 0
-    
+
     # Get FTP for TSS/IF calculation
-    from crud import get_latest_ftp # Local import to avoid circular dependency
-    ftp_record = get_latest_ftp(db, athlete_id=activity.athlete_id, activity_date=activity.start_time)
+    from crud import get_latest_ftp  # Local import to avoid circular dependency
+
+    ftp_record = get_latest_ftp(
+        db, athlete_id=activity.athlete_id, activity_date=activity.start_time
+    )
     ftp = ftp_record[0] if ftp_record else 0
 
     np = calculations.calculate_normalized_power(power_data)
     activity.normalized_power = np
-    activity.tss = calculations.calculate_tss(np, ftp, activity.total_moving_time) if ftp > 0 else 0
+    activity.tss = (
+        calculations.calculate_tss(np, ftp, activity.total_moving_time)
+        if ftp > 0
+        else 0
+    )
     activity.intensity_factor = round(np / ftp, 2) if ftp > 0 else 0.0
 
     # The activity object and its records are part of the session, so they will be
@@ -53,7 +63,10 @@ def recalculate_virtual_power(db: Session, activity: models.Activity, trainer_se
     db.add(activity)
     return activity
 
-def process_weekly_workload(daily_aggregates: list, end_date: date) -> schemas.WeeklyWorkload:
+
+def process_weekly_workload(
+    daily_aggregates: list, end_date: date
+) -> schemas.WeeklyWorkload:
     """
     Processes a list of daily metric aggregates into a weekly workload time-series analysis.
     Calculates a 4-week rolling average and standard deviation.
@@ -62,36 +75,42 @@ def process_weekly_workload(daily_aggregates: list, end_date: date) -> schemas.W
         return schemas.WeeklyWorkload(weeks=[])
 
     # 1. Convert to DataFrame and ensure all days are present
-    df = pd.DataFrame(daily_aggregates, columns=['date', 'value'])
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
+    df = pd.DataFrame(daily_aggregates, columns=["date", "value"])
+    df["date"] = pd.to_datetime(df["date"])
+    df.set_index("date", inplace=True)
 
     # Create a full date range for the last 16 weeks ending at the activity_date
     # This ensures we always show a complete 12-week chart even with missing data
     history_start_date = end_date - timedelta(weeks=16)
-    week_end_date = end_date + timedelta(days=6 - end_date.weekday())  # End of week containing end_date
-    full_date_range = pd.date_range(start=history_start_date, end=week_end_date, freq='D')
+    week_end_date = end_date + timedelta(
+        days=6 - end_date.weekday()
+    )  # End of week containing end_date
+    full_date_range = pd.date_range(
+        start=history_start_date, end=week_end_date, freq="D"
+    )
     df = df.reindex(full_date_range, fill_value=0)
 
     # 2. Resample daily data into weekly sums, with weeks starting on Monday.
-    weekly_sums = df['value'].resample('W-MON').sum().to_frame(name='weekly_total')
+    weekly_sums = df["value"].resample("W-MON").sum().to_frame(name="weekly_total")
 
     # 3. Calculate 4-week rolling average and standard deviation
-    weekly_sums['rolling_avg'] = weekly_sums['weekly_total'].rolling(window=4).mean()
-    rolling_std = weekly_sums['weekly_total'].rolling(window=4).std()
-    
-    weekly_sums['rolling_std_upper'] = weekly_sums['rolling_avg'] + rolling_std
-    weekly_sums['rolling_std_lower'] = weekly_sums['rolling_avg'] - rolling_std
+    weekly_sums["rolling_avg"] = weekly_sums["weekly_total"].rolling(window=4).mean()
+    rolling_std = weekly_sums["weekly_total"].rolling(window=4).std()
+
+    weekly_sums["rolling_std_upper"] = weekly_sums["rolling_avg"] + rolling_std
+    weekly_sums["rolling_std_lower"] = weekly_sums["rolling_avg"] - rolling_std
 
     # 4. Handle NaN values and clean up data
     # Forward fill to handle NaNs at the beginning of the rolling calculations
-    weekly_sums = weekly_sums.bfill() 
+    weekly_sums = weekly_sums.bfill()
     # Fill any remaining NaNs (if bfill wasn't enough) with 0 to ensure JSON compliance
     weekly_sums = weekly_sums.fillna(0)
     # Ensure lower bound is not negative
-    weekly_sums['rolling_std_lower'] = weekly_sums['rolling_std_lower'].clip(lower=0)
+    weekly_sums["rolling_std_lower"] = weekly_sums["rolling_std_lower"].clip(lower=0)
     # Reset index to get 'date' as a column
-    final_weeks_df = weekly_sums.reset_index().rename(columns={'index': 'week_start_date'})
+    final_weeks_df = weekly_sums.reset_index().rename(
+        columns={"index": "week_start_date"}
+    )
 
     # 5. Take the last 12 weeks for the final output
     final_weeks_df = final_weeks_df.tail(12)
@@ -105,7 +124,9 @@ def process_weekly_workload(daily_aggregates: list, end_date: date) -> schemas.W
     return schemas.WeeklyWorkload(weeks=workload_data_points)
 
 
-def process_visual_activity_log(activities: List[models.Activity], metric: str) -> List[schemas.WeeklyActivityData]:
+def process_visual_activity_log(
+    activities: List[models.Activity], metric: str
+) -> List[schemas.WeeklyActivityData]:
     """
     Processes activities into weekly data for visual bubble chart display.
     Groups activities by ISO weeks and creates chart data points.
@@ -117,7 +138,7 @@ def process_visual_activity_log(activities: List[models.Activity], metric: str) 
     metric_map = {
         "moving_time": "total_moving_time",
         "distance": "total_distance",
-        "unified_training_load": "unified_training_load"
+        "unified_training_load": "unified_training_load",
     }
     metric_field = metric_map.get(metric, "total_moving_time")
 
@@ -145,7 +166,7 @@ def process_visual_activity_log(activities: List[models.Activity], metric: str) 
 
         # Create chart data points
         chart_data = []
-        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         week_total = 0.0
         week_total_time = 0.0
         week_total_distance = 0.0
@@ -157,13 +178,15 @@ def process_visual_activity_log(activities: List[models.Activity], metric: str) 
 
             if not day_acts:
                 # Empty day - add a zero point
-                chart_data.append(schemas.ChartDataPoint(
-                    day=day_name,
-                    stack_index=1,
-                    metric_value=0.0,
-                    color="#e5e7eb",  # gray for empty
-                    daily_activities=[]
-                ))
+                chart_data.append(
+                    schemas.ChartDataPoint(
+                        day=day_name,
+                        stack_index=1,
+                        metric_value=0.0,
+                        color="#e5e7eb",  # gray for empty
+                        daily_activities=[],
+                    )
+                )
                 continue
 
             # Sort activities by start time for consistent stacking
@@ -178,9 +201,9 @@ def process_visual_activity_log(activities: List[models.Activity], metric: str) 
                     week_total += metric_value
 
                 # Accumulate totals for all metrics
-                time_val = getattr(activity, 'total_moving_time') or 0.0
-                dist_val = getattr(activity, 'total_distance') or 0.0
-                load_val = getattr(activity, 'unified_training_load')
+                time_val = getattr(activity, "total_moving_time") or 0.0
+                dist_val = getattr(activity, "total_distance") or 0.0
+                load_val = getattr(activity, "unified_training_load")
                 if pd.isna(load_val):
                     load_val = 0.0
                 week_total_time += time_val
@@ -197,27 +220,31 @@ def process_visual_activity_log(activities: List[models.Activity], metric: str) 
                     daily_act = schemas.DailyActivity(
                         activity_id=activity.activity_id,
                         name=activity.name,
-                        time=duration_str
+                        time=duration_str,
                     )
 
-                    chart_data.append(schemas.ChartDataPoint(
-                        day=day_name,
-                        stack_index=stack_index,
-                        metric_value=float(metric_value),
-                        color=color,
-                        daily_activities=[daily_act]
-                    ))
+                    chart_data.append(
+                        schemas.ChartDataPoint(
+                            day=day_name,
+                            stack_index=stack_index,
+                            metric_value=float(metric_value),
+                            color=color,
+                            daily_activities=[daily_act],
+                        )
+                    )
                     stack_index += 1
 
-        weekly_data.append(schemas.WeeklyActivityData(
-            week_start_date=week_start.isoformat(),
-            week_end_date=week_end.isoformat(),
-            total_metric=week_total,
-            total_time=week_total_time,
-            total_distance=week_total_distance,
-            total_load=week_total_load,
-            chart_data=chart_data
-        ))
+        weekly_data.append(
+            schemas.WeeklyActivityData(
+                week_start_date=week_start.isoformat(),
+                week_end_date=week_end.isoformat(),
+                total_metric=week_total,
+                total_time=week_total_time,
+                total_distance=week_total_distance,
+                total_load=week_total_load,
+                chart_data=chart_data,
+            )
+        )
 
     return weekly_data
 
@@ -226,14 +253,14 @@ def get_sport_color(sport: str) -> str:
     """Returns color for sport type."""
     sport_colors = {
         "cycling": "#22c55e",  # green
-        "run": "#f59e0b",     # amber
-        "gym": "#8b5cf6",     # violet
-        "yoga": "#ec4899",    # pink
+        "run": "#f59e0b",  # amber
+        "gym": "#8b5cf6",  # violet
+        "yoga": "#ec4899",  # pink
         "meditation": "#ec4899",  # pink
-        "walk": "#06b6d4",    # cyan
-        "hike": "#10b981",    # emerald
-        "swim": "#3b82f6",    # blue
-        "other": "#6b7280"    # gray
+        "walk": "#06b6d4",  # cyan
+        "hike": "#10b981",  # emerald
+        "swim": "#3b82f6",  # blue
+        "other": "#6b7280",  # gray
     }
     sport_lower = (sport or "").lower()
     return sport_colors.get(sport_lower, sport_colors["other"])

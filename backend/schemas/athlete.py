@@ -5,21 +5,26 @@ from .performance import AthleteMetric
 from .equipment import Equipment
 from .activity import ActivitySummary
 
+
 class AthleteBase(BaseModel):
     first_name: str
     last_name: str
     date_of_birth: Optional[date] = None
     profile_picture_url: Optional[str] = None
 
+
 class AthleteCreate(AthleteBase):
     pass
+
 
 class AthleteUpdate(AthleteBase):
     pass
 
+
 class AthleteSummary(AthleteBase):
     athlete_id: int
     model_config = ConfigDict(from_attributes=True)
+
 
 class AthleteResponse(AthleteBase):
     athlete_id: int

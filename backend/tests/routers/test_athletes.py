@@ -31,9 +31,7 @@ def db_session():
 def test_athlete(db_session: Session):
     # Create a test athlete
     athlete_data = AthleteCreate(
-        first_name="Test",
-        last_name="Athlete",
-        date_of_birth=date(1990, 1, 1)
+        first_name="Test", last_name="Athlete", date_of_birth=date(1990, 1, 1)
     )
     db_athlete = crud_athlete.create_athlete(db=db_session, athlete=athlete_data)
     yield db_athlete
@@ -58,8 +56,7 @@ def test_upload_profile_picture(client: TestClient, test_athlete: Athlete):
 
     # Make the request
     response = client.post(
-        f"/athlete/{test_athlete.athlete_id}/profile-picture",
-        files=files
+        f"/athlete/{test_athlete.athlete_id}/profile-picture", files=files
     )
 
     # Assert successful response

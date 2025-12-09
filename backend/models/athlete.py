@@ -4,11 +4,13 @@ from sqlalchemy.orm import relationship
 
 from . import Base
 
+
 class Athlete(Base):
     """
     The central user model. All data is linked to an athlete.
     """
-    __tablename__ = 'athletes'
+
+    __tablename__ = "athletes"
 
     athlete_id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String, nullable=False)
@@ -18,12 +20,25 @@ class Athlete(Base):
     # Personalized Scaling Factors for training load harmonization
     psf_trimp = Column(Float, nullable=False, default=0.42)
     psf_pss = Column(Float, nullable=False, default=0.24)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     # Relationships
-    activities = relationship("Activity", back_populates="athlete", cascade="all, delete-orphan")
-    metrics = relationship("AthleteMetric", back_populates="athlete", cascade="all, delete-orphan")
-    equipment = relationship("Equipment", back_populates="athlete", cascade="all, delete-orphan")
-    daily_metrics = relationship("DailyPerformanceMetric", back_populates="athlete", cascade="all, delete-orphan")
-    potential_markers = relationship("PotentialPerformanceMarker", back_populates="athlete", cascade="all, delete-orphan")
-
+    activities = relationship(
+        "Activity", back_populates="athlete", cascade="all, delete-orphan"
+    )
+    metrics = relationship(
+        "AthleteMetric", back_populates="athlete", cascade="all, delete-orphan"
+    )
+    equipment = relationship(
+        "Equipment", back_populates="athlete", cascade="all, delete-orphan"
+    )
+    daily_metrics = relationship(
+        "DailyPerformanceMetric", back_populates="athlete", cascade="all, delete-orphan"
+    )
+    potential_markers = relationship(
+        "PotentialPerformanceMarker",
+        back_populates="athlete",
+        cascade="all, delete-orphan",
+    )

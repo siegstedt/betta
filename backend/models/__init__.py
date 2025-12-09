@@ -7,7 +7,13 @@ Base = declarative_base()
 from .activity import Activity, ActivityRecord, ActivityLap  # noqa: E402
 from .athlete import Athlete  # noqa: E402
 from .equipment import Equipment, EquipmentType  # noqa: E402
-from .performance import AthleteMetric, DailyPerformanceMetric, MetricType, PotentialPerformanceMarker, PotentialMarkerStatus  # noqa: E402
+from .performance import (
+    AthleteMetric,
+    DailyPerformanceMetric,
+    MetricType,
+    PotentialPerformanceMarker,
+    PotentialMarkerStatus,
+)  # noqa: E402
 
 __all__ = [
     "Base",
@@ -23,4 +29,3 @@ __all__ = [
     "PotentialPerformanceMarker",
     "PotentialMarkerStatus",
 ]
-
