@@ -11,6 +11,9 @@ class AthleteBase(BaseModel):
     last_name: str
     date_of_birth: Optional[date] = None
     profile_picture_url: Optional[str] = None
+    strava_access_token: Optional[str] = None
+    strava_refresh_token: Optional[str] = None
+    strava_expires_at: Optional[datetime] = None
 
 
 class AthleteCreate(AthleteBase):
@@ -34,4 +37,5 @@ class AthleteResponse(AthleteBase):
     psf_trimp: float
     psf_pss: float
     equipment: List[Equipment] = []
+    is_strava_connected: bool = False
     model_config = ConfigDict(from_attributes=True)

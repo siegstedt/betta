@@ -20,6 +20,10 @@ class Athlete(Base):
     # Personalized Scaling Factors for training load harmonization
     psf_trimp = Column(Float, nullable=False, default=0.42)
     psf_pss = Column(Float, nullable=False, default=0.24)
+    # Strava integration fields
+    strava_access_token = Column(String, nullable=True)
+    strava_refresh_token = Column(String, nullable=True)
+    strava_expires_at = Column(DateTime, nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -42,3 +46,7 @@ class Athlete(Base):
         back_populates="athlete",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def is_strava_connected(self) -> bool:
+        return self.strava_access_token is not None

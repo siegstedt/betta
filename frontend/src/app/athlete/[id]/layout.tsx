@@ -6,6 +6,7 @@ import { config } from '@/lib/config';
 const API_URL = config.apiUrl;
 
 async function getAthlete(athleteId: string): Promise<Athlete | null> {
+  if (!athleteId || isNaN(Number(athleteId))) return null;
   try {
     // Use { cache: 'no-store' } to ensure we always get the latest athlete data
     const response = await fetch(`${API_URL}/athlete/${athleteId}`, {

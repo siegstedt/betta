@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 
 import models
@@ -52,6 +53,42 @@ def update_athlete_profile_picture(db: Session, athlete_id: int, picture_url: st
         return None
 
     db_athlete.profile_picture_url = picture_url
+    db.add(db_athlete)
+    db.commit()
+    db.refresh(db_athlete)
+    return db_athlete
+
+
+def update_athlete_strava_tokens(
+    db: Session,
+    athlete_id: int,
+    access_token: str,
+    refresh_token: str,
+    expires_at: datetime,
+):
+    db_athlete = (
+        db.query(models.Athlete).filter(models.Athlete.athlete_id == athlete_id).first()
+    )
+    if not db_athlete:
+        return None
+    db_athlete.strava_access_token = access_token
+    db_athlete.strava_refresh_token = refresh_token
+    db_athlete.strava_expires_at = expires_at
+    db.add(db_athlete)
+    db.commit()
+    db.refresh(db_athlete)
+    return db_athlete
+
+
+def disconnect_strava(db: Session, athlete_id: int):
+    db_athlete = (
+        db.query(models.Athlete).filter(models.Athlete.athlete_id == athlete_id).first()
+    )
+    if not db_athlete:
+        return None
+    db_athlete.strava_access_token = None
+    db_athlete.strava_refresh_token = None
+    db_athlete.strava_expires_at = None
     db.add(db_athlete)
     db.commit()
     db.refresh(db_athlete)

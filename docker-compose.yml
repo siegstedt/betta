@@ -27,10 +27,11 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - ./fit_files:/app/fit_files      
+      - ./fit_files:/app/fit_files
     depends_on:
       db:
         condition: service_healthy
+    env_file: .env
     environment:
       - DATABASE_URL=postgresql://betta_user:betta_password@db:5432/betta_db
 

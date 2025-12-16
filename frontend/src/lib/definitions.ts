@@ -18,6 +18,7 @@ export type Athlete = {
   metrics: AthleteMetric[];
   activities: ActivitySummary[];
   equipment: Equipment[];
+  is_strava_connected: boolean;
 };
 
 export type Equipment = {

@@ -57,6 +57,9 @@ export default function SettingsPage() {
   const [confirmationName, setConfirmationName] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Strava state
+  const [stravaConnecting, setStravaConnecting] = useState(false);
+
   const fetchAthlete = async () => {
     setLoading(true);
     setError(null);
@@ -97,6 +100,34 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchAthlete();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athleteId]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+    if (code && athleteId) {
+      // Call callback
+      fetch(`${API_URL}/strava/callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, athlete_id: parseInt(athleteId) }),
+      })
+        .then(() => {
+          // Clear URL
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
+          fetchAthlete();
+        })
+        .catch(() => setError('Failed to connect Strava'));
+    } else if (error) {
+      setError('Strava connection failed: ' + error);
+      // Clear URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [athleteId]);
 
   const handleProfileSubmit = async (e: FormEvent) => {
@@ -247,6 +278,43 @@ export default function SettingsPage() {
       setError(
         err instanceof Error ? err.message : 'An unknown error occurred.'
       );
+    }
+  };
+
+  const handleStravaConnect = async () => {
+    if (!athlete) return;
+
+    setStravaConnecting(true);
+    try {
+      if (athlete.is_strava_connected) {
+        // Disconnect
+        const response = await fetch(
+          `${API_URL}/strava/disconnect/${athlete.athlete_id}`,
+          {
+            method: 'DELETE',
+          }
+        );
+        if (!response.ok) throw new Error('Failed to disconnect Strava.');
+      } else {
+        // Connect: get auth url and redirect
+        const response = await fetch(`${API_URL}/strava/auth`);
+        if (response.ok) {
+          const data = await response.json();
+          window.location.href = data.auth_url;
+          return;
+        } else {
+          throw new Error('Failed to get Strava auth URL.');
+        }
+      }
+      // Refresh athlete data
+      await fetchAthlete();
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
+    } finally {
+      setStravaConnecting(false);
     }
   };
 
@@ -456,6 +524,43 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Connected Apps */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Connected Apps</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">S</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">Strava</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sync activities automatically
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleStravaConnect}
+                    disabled={stravaConnecting}
+                  >
+                    {stravaConnecting
+                      ? 'Processing...'
+                      : athlete?.is_strava_connected
+                        ? 'Disconnect'
+                        : 'Connect'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Theme Settings */}
