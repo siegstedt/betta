@@ -96,15 +96,15 @@ You can get a full local development environment running with a single command.
     cd betta
     ```
 
-3. **Configure environment variables (optional):**
+3. **Configure environment variables:**
 
-    For local development, copy the example environment file:
+    Copy the example environment file to the root directory:
 
     ```bash
-    cp frontend/.env.example frontend/.env.local
+    cp .env.example .env
     ```
 
-    The default configuration should work for Docker development. For custom setups, edit `frontend/.env.local` with your API URL.
+    Edit `.env` with your specific values. The default configuration should work for Docker development.
 
 4. **Build and run the containers:**
 
@@ -121,18 +121,33 @@ You can get a full local development environment running with a single command.
 
 ### Environment Configuration
 
-The application uses environment variables for configuration:
+The application uses a single `.env` file in the root directory for all environment variables.
 
-- **Frontend**: `NEXT_PUBLIC_API_URL` - URL of the backend API
-  - Development (Docker): `http://backend:8000`
-  - Development (local): `http://localhost:8000`
-  - Production: Your deployed backend URL
+1. **Copy the example file:**
 
-Environment files:
-- `.env.example`: Template with all required variables
-- `.env.local`: Local development overrides (not committed to git)
+   ```bash
+   cp .env.example .env
+   ```
 
-For production deployment, set the appropriate environment variables in your hosting platform.
+2. **Edit `.env` with your values.**
+
+#### Required Environment Variables
+
+* **Database:**
+  * `DATABASE_URL`: PostgreSQL connection string (default: `postgresql://betta_user:betta_password@db:5432/betta_db`)
+
+* **Strava Integration:**
+  * `STRAVA_CLIENT_ID`: Your Strava app client ID
+  * `STRAVA_CLIENT_SECRET`: Your Strava app client secret
+  * `STRAVA_REDIRECT_URI`: OAuth redirect URI (e.g., `http://localhost:3000/athlete/1/settings`)
+
+* **CORS:**
+  * `CORS_ORIGINS`: Comma-separated list of allowed origins (e.g., `http://localhost:3000,http://192.168.178.12:3000`)
+
+* **Frontend:**
+  * `NEXT_PUBLIC_API_URL`: Backend API URL for the frontend (e.g., `http://localhost:8000`)
+
+For production deployment, set these variables in your hosting platform or use Docker secrets.
 
 -----
 
@@ -161,4 +176,3 @@ For production deployment, set the appropriate environment variables in your hos
 This is an open-source project. Contributions are welcome\! Please fork the repository and submit a pull request with your proposed changes. Ensure that your code follows the existing style and includes relevant tests.
 
 This project is licensed under MIT with the Commons Clause, prohibiting commercial use or sale. See LICENSE for details.
-
