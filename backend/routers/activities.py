@@ -1,6 +1,7 @@
 import os
 import uuid
 import fitparse
+import requests
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from sqlalchemy.orm import Session
 from fastapi.responses import FileResponse
@@ -9,7 +10,10 @@ from typing import List, Optional, Tuple
 import crud
 import schemas
 import services
+import models
+from services.strava_service import StravaService
 from database import get_db
+from datetime import datetime, timedelta
 
 router = APIRouter(
     tags=["Activities"],
@@ -272,51 +276,135 @@ async def upload_activity(
             status_code=400, detail="Invalid file type. Please upload a .fit file."
         )
 
-    try:
-        content = await file.read()
+    content = await file.read()
 
-        fit_files_dir = "/app/fit_files"
-        os.makedirs(fit_files_dir, exist_ok=True)
-        unique_filename = f"{uuid.uuid4()}.fit"
-        file_path = os.path.join(fit_files_dir, unique_filename)
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
+    fit_files_dir = "/app/fit_files"
+    os.makedirs(fit_files_dir, exist_ok=True)
+    unique_filename = f"{uuid.uuid4()}.fit"
+    file_path = os.path.join(fit_files_dir, unique_filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(content)
 
-        activity_data, record_dicts, lap_dicts, potential_markers = (
-            services.fit_parser.parse_fit_file(
-                content=content,
-                db=db,
-                athlete_id=athlete_id,
-                file_name=file.filename,
-            )
-        )
-
-        new_activity = crud.create_activity_with_records(
+    activity_data, record_dicts, lap_dicts, potential_markers = (
+        services.fit_parser.parse_fit_file(
+            content=content,
             db=db,
-            activity=activity_data,
-            records=record_dicts,
-            laps=lap_dicts,
-            potential_markers=potential_markers,
             athlete_id=athlete_id,
-            fit_file_path=file_path,
+            file_name=file.filename,
         )
+    )
 
-        # After creating activity, update scaling factors and PMC
-        services.athlete_services.update_scaling_factors(db, athlete_id)
-        services.calculations.recalculate_pmc_from_date(
-            db, athlete_id, new_activity.start_time.date()
+    new_activity = crud.create_activity_with_records(
+        db=db,
+        activity=activity_data,
+        records=record_dicts,
+        laps=lap_dicts,
+        potential_markers=potential_markers,
+        athlete_id=athlete_id,
+        fit_file_path=file_path,
+    )
+
+    # After creating activity, update scaling factors and PMC
+    services.athlete_services.update_scaling_factors(db, athlete_id)
+    services.calculations.recalculate_pmc_from_date(
+        db, athlete_id, new_activity.start_time.date()
+    )
+
+    return new_activity
+
+
+@router.post("/activity/{activity_id}/refresh-strava-data", response_model=schemas.Activity)
+def refresh_strava_activity_data(activity_id: int, db: Session = Depends(get_db)):
+    """Refreshes activity data from Strava, overwriting existing records."""
+    db_activity = crud.get_activity(db, activity_id=activity_id)
+    if db_activity is None:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    if db_activity.source != 'strava':
+        raise HTTPException(status_code=400, detail="Activity is not from Strava")
+
+    athlete = db_activity.athlete
+    if not athlete or not athlete.strava_access_token:
+        raise HTTPException(status_code=400, detail="Strava access token not available")
+
+    # Check if token is expired
+    now = datetime.utcnow()
+    if athlete.strava_expires_at and athlete.strava_expires_at <= now:
+        # Refresh token
+        service = StravaService("")  # No access token needed for refresh
+        refresh_data = service.refresh_access_token(athlete.strava_refresh_token)
+        expires_at = datetime.fromtimestamp(refresh_data["expires_at"])
+        crud.update_athlete_strava_tokens(
+            db,
+            athlete.athlete_id,
+            refresh_data["access_token"],
+            refresh_data["refresh_token"],
+            expires_at,
+            athlete.strava_athlete_id,
         )
+        athlete = crud.get_athlete(db, athlete.athlete_id)  # Refresh athlete data
 
-        return new_activity
+    service = StravaService(athlete.strava_access_token)
 
-    except fitparse.FitParseError as e:
-        raise HTTPException(status_code=400, detail=f"Error parsing .fit file: {e}")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
-        )
+    if not db_activity.strava_activity_id:
+        raise HTTPException(status_code=400, detail="Strava activity ID not available")
+
+    summary = service.get_activity_summary(db_activity.strava_activity_id)
+    try:
+        streams = service.get_activity_streams(db_activity.strava_activity_id)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            streams = {}
+        else:
+            raise
+
+    # Delete existing records
+    crud.delete_activity_records(db, activity_id)
+
+    # Update activity summary fields
+    db_activity.name = summary.get("name", db_activity.name)
+    db_activity.total_moving_time = summary.get("moving_time", db_activity.total_moving_time)
+    db_activity.total_elapsed_time = summary.get("elapsed_time", db_activity.total_elapsed_time)
+    db_activity.total_distance = summary.get("distance", db_activity.total_distance)
+    db_activity.average_speed = summary.get("average_speed", db_activity.average_speed)
+    db_activity.max_speed = summary.get("max_speed", db_activity.max_speed)
+    db_activity.average_heart_rate = summary.get("average_heartrate", db_activity.average_heart_rate)
+    db_activity.max_heart_rate = summary.get("max_heartrate", db_activity.max_heart_rate)
+    db_activity.average_power = summary.get("average_watts", db_activity.average_power)
+    db_activity.max_power = summary.get("max_watts", db_activity.max_power)
+    db_activity.total_elevation_gain = summary.get("total_elevation_gain", db_activity.total_elevation_gain)
+    db_activity.average_cadence = summary.get("average_cadence", db_activity.average_cadence)
+    db_activity.max_cadence = summary.get("max_cadence", db_activity.max_cadence)
+    db_activity.total_calories = summary.get("calories", db_activity.total_calories)
+
+    # Re-create records from streams
+    time_data = streams.get("time", {}).get("data", [])
+    if time_data:
+        watts_data = streams.get("watts", {}).get("data", [])
+        watts = watts_data + [None] * (len(time_data) - len(watts_data))
+        heartrate_data = streams.get("heartrate", {}).get("data", [])
+        heartrate = heartrate_data + [None] * (len(time_data) - len(heartrate_data))
+        latlng_data = streams.get("latlng", {}).get("data", [])
+        latlng = latlng_data + [None] * (len(time_data) - len(latlng_data))
+
+        for i, timestamp in enumerate(time_data):
+            record = models.ActivityRecord(
+                activity_id=activity_id,
+                timestamp=db_activity.start_time + timedelta(seconds=timestamp),
+                power=watts[i] if watts[i] is not None else None,
+                heart_rate=heartrate[i] if heartrate[i] is not None else None,
+                latitude=latlng[i][0] if latlng[i] is not None else None,
+                longitude=latlng[i][1] if latlng[i] is not None else None,
+            )
+            db.add(record)
+
+    # Recalculate derived metrics
+    services.activity_processing.recalculate_virtual_power(db, db_activity, 0)
+
+    db.commit()
+    db.refresh(db_activity)
+
+    return db_activity
 
 
 @router.post("/activity/manual/{athlete_id}", response_model=schemas.Activity)

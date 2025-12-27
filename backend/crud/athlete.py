@@ -65,6 +65,7 @@ def update_athlete_strava_tokens(
     access_token: str,
     refresh_token: str,
     expires_at: datetime,
+    strava_athlete_id: int = None,
 ):
     db_athlete = (
         db.query(models.Athlete).filter(models.Athlete.athlete_id == athlete_id).first()
@@ -74,10 +75,20 @@ def update_athlete_strava_tokens(
     db_athlete.strava_access_token = access_token
     db_athlete.strava_refresh_token = refresh_token
     db_athlete.strava_expires_at = expires_at
+    if strava_athlete_id is not None:
+        db_athlete.strava_athlete_id = strava_athlete_id
     db.add(db_athlete)
     db.commit()
     db.refresh(db_athlete)
     return db_athlete
+
+
+def get_athlete_by_strava_id(db: Session, strava_athlete_id: int):
+    return (
+        db.query(models.Athlete)
+        .filter(models.Athlete.strava_athlete_id == strava_athlete_id)
+        .first()
+    )
 
 
 def disconnect_strava(db: Session, athlete_id: int):

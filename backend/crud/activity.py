@@ -240,3 +240,18 @@ def delete_activity(db: Session, activity_id: int):
     db.delete(db_activity)
     db.commit()
     return {"ok": True}
+
+
+def get_activity_by_strava_id(db: Session, strava_activity_id: int):
+    """Get activity by Strava activity ID."""
+    return (
+        db.query(models.Activity)
+        .filter(models.Activity.strava_activity_id == strava_activity_id)
+        .first()
+    )
+
+
+def delete_activity_records(db: Session, activity_id: int):
+    """Delete all records for an activity."""
+    db.query(models.ActivityRecord).filter(models.ActivityRecord.activity_id == activity_id).delete()
+    db.commit()

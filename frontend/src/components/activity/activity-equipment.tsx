@@ -30,7 +30,7 @@ export default function ActivityEquipment({
 }: {
   activity: Activity;
 }) {
-  const { device, bike, shoe, trainer } = activity;
+  const { device, bike, shoe, trainer, source } = activity;
 
   return (
     <>
@@ -45,6 +45,17 @@ export default function ActivityEquipment({
         <EquipmentItem label="Bike" name={bike?.name} />
         <EquipmentItem label="Shoes" name={shoe?.name} />
         <EquipmentItem label="Trainer" name={trainer?.name} />
+        {source === 'strava' && (
+          <div className="p-2 -m-2">
+            <p className="text-xs font-medium text-muted-foreground">Source</p>
+            <div className="mt-0.5 flex items-center space-x-1">
+              <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
+                <span className="text-white font-bold text-xs">S</span>
+              </div>
+              <p className="text-sm font-medium text-foreground">Strava</p>
+            </div>
+          </div>
+        )}
         <Link href={`/activity/${activity.activity_id}/edit`}>
           <div className="p-2 rounded-lg border border-dashed border-muted-foreground/50 text-center transition-colors hover:bg-accent">
             <p className="mt-0.5 text-xs font-medium text-muted-foreground">

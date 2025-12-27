@@ -47,6 +47,8 @@ class ActivityBase(BaseModel):
     sport: Optional[str] = None
     sub_sport: Optional[str] = None
     ride_type: Optional[str] = None
+    source: Optional[str] = 'manual'
+    strava_activity_id: Optional[int] = None
     bike_id: Optional[int] = None
     shoe_id: Optional[int] = None
     device_id: Optional[int] = None

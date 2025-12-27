@@ -21,6 +21,7 @@ class Athlete(Base):
     psf_trimp = Column(Float, nullable=False, default=0.42)
     psf_pss = Column(Float, nullable=False, default=0.24)
     # Strava integration fields
+    strava_athlete_id = Column(Integer, nullable=True, unique=True)
     strava_access_token = Column(String, nullable=True)
     strava_refresh_token = Column(String, nullable=True)
     strava_expires_at = Column(DateTime, nullable=True)

@@ -5,10 +5,7 @@ services:
     image: timescale/timescaledb:latest-pg16
     container_name: betta_db
     restart: always
-    environment:
-      - POSTGRES_USER=betta_user
-      - POSTGRES_PASSWORD=betta_password
-      - POSTGRES_DB=betta_db
+    env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     ports:
@@ -32,8 +29,19 @@ services:
       db:
         condition: service_healthy
     env_file: .env
-    environment:
-      - DATABASE_URL=postgresql://betta_user:betta_password@db:5432/betta_db
+
+  worker:
+    build: ./backend
+    container_name: betta_worker
+    restart: always
+    volumes:
+      - ./backend:/app
+      - ./fit_files:/app/fit_files
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: python worker.py
 
   frontend:
     build: ./frontend
@@ -50,6 +58,13 @@ services:
     env_file: .env
     environment:
       - CHOKIDAR_USEPOLLING=true
+
+  redis:
+    image: redis:7-alpine
+    container_name: betta_redis
+    restart: always
+    ports:
+      - "6379:6379"
 
 volumes:
   postgres_data:

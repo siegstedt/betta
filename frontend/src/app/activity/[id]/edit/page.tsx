@@ -19,6 +19,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -60,6 +66,8 @@ export default function EditActivityPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showRefreshDialog, setShowRefreshDialog] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -75,6 +83,8 @@ export default function EditActivityPage() {
   const [deviceId, setDeviceId] = useState<string>('none');
   const [trainerId, setTrainerId] = useState<string>('none');
   const [trainerSetting, setTrainerSetting] = useState<number>(1);
+
+  const isStravaActivity = activity?.source === 'strava';
 
   useEffect(() => {
     if (!activityId) return;
@@ -172,6 +182,37 @@ export default function EditActivityPage() {
     }
   };
 
+  const handleRefreshStravaData = async () => {
+    setIsRefreshing(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_URL}/activity/${activityId}/refresh-strava-data`,
+        {
+          method: 'POST',
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to refresh Strava data.');
+      }
+      // Refetch activity data
+      const activityRes = await fetch(`${API_URL}/activity/${activityId}`);
+      if (!activityRes.ok) {
+        throw new Error('Failed to refetch activity data.');
+      }
+      const updatedActivity = await activityRes.json();
+      setActivity(updatedActivity);
+      setShowRefreshDialog(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center">Loading activity details...</div>;
   }
@@ -227,9 +268,16 @@ export default function EditActivityPage() {
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Edit Activity</CardTitle>
+        {isStravaActivity && (
+          <p className="text-sm text-muted-foreground">
+            This activity is synced from Strava and cannot be edited.
+          </p>
+        )}
       </CardHeader>
       <form onSubmit={handleSaveChanges}>
-        <CardContent>
+        <CardContent
+          className={isStravaActivity ? 'opacity-50 pointer-events-none' : ''}
+        >
           <div className="grid grid-cols-1 md:grid-cols-7 gap-x-8 gap-y-6">
             {/* Left Column */}
             <div className="md:col-span-4 space-y-6">
@@ -400,15 +448,49 @@ export default function EditActivityPage() {
             <p className="text-sm text-destructive text-center mb-4">{error}</p>
           )}
           <div className="flex items-center justify-between">
-            <Button variant="ghost" asChild>
-              <Link href={`/activity/${activityId}/overview`}>Cancel</Link>
-            </Button>
-            <Button type="submit" disabled={isSaving}>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" asChild>
+                <Link href={`/activity/${activityId}/overview`}>Cancel</Link>
+              </Button>
+              {isStravaActivity && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRefreshDialog(true)}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? 'Refreshing...' : 'Update Strava Data Stream'}
+                </Button>
+              )}
+            </div>
+            <Button type="submit" disabled={isSaving || isStravaActivity}>
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </CardFooter>
       </form>
+
+      <Dialog open={showRefreshDialog} onOpenChange={setShowRefreshDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Strava Data Stream</DialogTitle>
+            <DialogDescription>
+              This will overwrite existing activity data with the latest from
+              Strava. Continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRefreshDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRefreshStravaData} disabled={isRefreshing}>
+              {isRefreshing ? 'Refreshing...' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -2,7 +2,11 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Athlete, AthleteMetric } from '@/lib/definitions';
+import {
+  Athlete,
+  AthleteMetric,
+  StravaActivityOption,
+} from '@/lib/definitions';
 import { config } from '@/lib/config';
 import {
   Button,
@@ -59,6 +63,18 @@ export default function SettingsPage() {
 
   // Strava state
   const [stravaConnecting, setStravaConnecting] = useState(false);
+  const [historicActivitiesModalOpen, setHistoricActivitiesModalOpen] =
+    useState(false);
+  const [stravaActivities, setStravaActivities] = useState<
+    StravaActivityOption[]
+  >([]);
+  const [selectedActivities, setSelectedActivities] = useState<Set<number>>(
+    new Set()
+  );
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [ingestingActivities, setIngestingActivities] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(true);
 
   const fetchAthlete = async () => {
     setLoading(true);
@@ -318,6 +334,65 @@ export default function SettingsPage() {
     }
   };
 
+  const handleLoadStravaActivities = async (page: number = 1) => {
+    if (!athlete) return;
+
+    setLoadingActivities(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/strava/activities/${athlete.athlete_id}?page=${page}&per_page=30`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (page === 1) {
+          setStravaActivities(data.activities);
+        } else {
+          setStravaActivities((prev) => [...prev, ...data.activities]);
+        }
+        setHasMorePages(data.activities.length === 30);
+        setCurrentPage(page);
+      } else {
+        throw new Error('Failed to load Strava activities');
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
+  const handleIngestSelectedActivities = async () => {
+    if (!athlete || selectedActivities.size === 0) return;
+
+    setIngestingActivities(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/strava/ingest-selected/${athlete.athlete_id}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Array.from(selectedActivities)),
+        }
+      );
+      if (response.ok) {
+        setHistoricActivitiesModalOpen(false);
+        setSelectedActivities(new Set());
+        setError(null);
+        // Optionally refresh athlete data or show success message
+      } else {
+        throw new Error('Failed to ingest activities');
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
+    } finally {
+      setIngestingActivities(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!athlete || confirmationName !== athlete.first_name) return;
 
@@ -534,29 +609,53 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">S</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">S</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Strava</p>
+                        <p className="text-sm text-muted-foreground">
+                          Sync activities automatically
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Strava</p>
-                      <p className="text-sm text-muted-foreground">
-                        Sync activities automatically
-                      </p>
-                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={handleStravaConnect}
+                      disabled={stravaConnecting}
+                    >
+                      {stravaConnecting
+                        ? 'Processing...'
+                        : athlete?.is_strava_connected
+                          ? 'Disconnect'
+                          : 'Connect'}
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleStravaConnect}
-                    disabled={stravaConnecting}
-                  >
-                    {stravaConnecting
-                      ? 'Processing...'
-                      : athlete?.is_strava_connected
-                        ? 'Disconnect'
-                        : 'Connect'}
-                  </Button>
+                  {athlete?.is_strava_connected && (
+                    <div className="flex items-center justify-between pl-11">
+                      <div>
+                        <p className="text-sm font-medium">
+                          Load Historic Activities
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Import past activities from Strava
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setHistoricActivitiesModalOpen(true);
+                          handleLoadStravaActivities(1);
+                        }}
+                      >
+                        Load Activities
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -661,6 +760,94 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Historic Activities Modal */}
+        <Dialog
+          open={historicActivitiesModalOpen}
+          onOpenChange={setHistoricActivitiesModalOpen}
+        >
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Load Historic Strava Activities</DialogTitle>
+              <DialogDescription>
+                Select activities to import from your Strava account. Activities
+                already in Betta will be skipped.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {stravaActivities.length === 0 && !loadingActivities && (
+                <p className="text-center text-muted-foreground">
+                  No activities found.
+                </p>
+              )}
+              {stravaActivities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-center space-x-3 p-3 border rounded-lg"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedActivities.has(activity.id)}
+                    onChange={(e) => {
+                      const newSelected = new Set(selectedActivities);
+                      if (e.target.checked) {
+                        newSelected.add(activity.id);
+                      } else {
+                        newSelected.delete(activity.id);
+                      }
+                      setSelectedActivities(newSelected);
+                    }}
+                    className="rounded"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{activity.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(activity.start_date).toLocaleDateString()} •{' '}
+                      {activity.type} •{(activity.distance / 1000).toFixed(1)}km
+                      •{Math.floor(activity.moving_time / 60)}min
+                      {activity.average_watts &&
+                        ` • ${activity.average_watts}W avg`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {loadingActivities && (
+                <div className="text-center py-4">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Loading activities...
+                  </p>
+                </div>
+              )}
+              {hasMorePages && !loadingActivities && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleLoadStravaActivities(currentPage + 1)}
+                  className="w-full"
+                >
+                  Load More Activities
+                </Button>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setHistoricActivitiesModalOpen(false)}
+                disabled={ingestingActivities}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleIngestSelectedActivities}
+                disabled={selectedActivities.size === 0 || ingestingActivities}
+              >
+                {ingestingActivities
+                  ? 'Importing...'
+                  : `Import ${selectedActivities.size} Activities`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

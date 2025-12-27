@@ -88,6 +88,8 @@ export type ActivitySummary = {
   shoe_id?: number | null;
   device_id?: number | null;
   trainer_id?: number | null;
+  source?: string;
+  strava_activity_id?: number | null;
 };
 
 export type ActivityRecord = {
@@ -250,4 +252,21 @@ export type ActivityUpdatePayload = {
   device_id?: number | null;
   trainer_id?: number | null;
   trainer_setting?: unknown; // Only when needed for virtual power
+};
+
+export type StravaActivityOption = {
+  id: number;
+  name: string;
+  type: string;
+  start_date: string;
+  distance: number;
+  moving_time: number;
+  total_elevation_gain: number;
+  average_speed: number;
+  max_speed: number;
+  average_watts?: number;
+  max_watts?: number;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  workout_type?: number;
 };

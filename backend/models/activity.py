@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, BigInteger
 from sqlalchemy.orm import relationship
 
 from . import Base
@@ -23,6 +23,8 @@ class Activity(Base):
     sport = Column(String, nullable=True)
     sub_sport = Column(String, nullable=True)
     ride_type = Column(String, nullable=True)
+    source = Column(String, nullable=True, default='manual')
+    strava_activity_id = Column(BigInteger, nullable=True)
 
     start_time = Column(DateTime, nullable=False)
     description = Column(String, nullable=True)
