@@ -28,7 +28,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
+    env_file: .env.docker
 
   worker:
     build: ./backend
@@ -40,7 +40,7 @@ services:
     depends_on:
       - db
       - redis
-    env_file: .env
+    env_file: .env.docker
     command: python worker.py
 
   frontend:
@@ -55,7 +55,7 @@ services:
       - /app/.next
     depends_on:
       - backend
-    env_file: .env
+    env_file: .env.docker
     environment:
       - CHOKIDAR_USEPOLLING=true
 
